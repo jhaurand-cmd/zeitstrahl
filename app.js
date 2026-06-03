@@ -103,6 +103,16 @@ function removeCard(id) {
   });
 }
 
+function removeCards(ids) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+    ids.forEach((id) => store.delete(id));
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
 function getProjectMeta() {
   return new Promise((resolve, reject) => {
     const request = metaTransaction().get("project");
@@ -340,10 +350,46 @@ async function addTimeline() {
   startNewCard(timelineItem.id);
 }
 
+async function deleteTimeline(timelineId) {
+  if (!requireUnlocked()) return;
+  if (appShell.classList.contains("editor-hidden")) return;
+
+  const timelineItem = timelines.find((item) => item.id === timelineId);
+  if (!timelineItem) return;
+
+  if (timelines.length <= 1) {
+    setFormStatus("Der letzte Zeitstrahl kann nicht gelöscht werden.", true);
+    return;
+  }
+
+  const timelineCards = cards.filter((card) => cardTimelineId(card) === timelineId);
+  const cardHint = timelineCards.length === 1
+    ? "Eine Karte wird dabei ebenfalls gelöscht."
+    : `${timelineCards.length} Karten werden dabei ebenfalls gelöscht.`;
+  const message = timelineCards.length > 0
+    ? `Zeitstrahl "${timelineItem.name}" wirklich löschen?\n\n${cardHint}`
+    : `Zeitstrahl "${timelineItem.name}" wirklich löschen?`;
+
+  if (!confirm(message)) return;
+
+  timelines = timelines.filter((item) => item.id !== timelineId);
+  await saveTimelinesMeta(timelines);
+
+  if (timelineCards.length > 0) {
+    await removeCards(timelineCards.map((card) => card.id));
+    cards = cards.filter((card) => cardTimelineId(card) !== timelineId);
+  }
+
+  activateTimeline(activeTimelineId === timelineId ? timelines[0].id : activeTimelineId);
+  resetForm();
+  renderTimelines();
+  setFormStatus("Zeitstrahl gelöscht.");
+}
+
 function showEditor() {
   if (!isUnlocked) return;
   appShell.classList.remove("editor-hidden");
-  toggleEditorButton.textContent = "Editor ausblenden";
+  toggleEditorButton.textContent = "Edit";
   toggleEditorButton.setAttribute("aria-expanded", "true");
   addTimelineButton.hidden = false;
   updateProjectDescriptionState();
@@ -352,7 +398,7 @@ function showEditor() {
 
 function hideEditor() {
   appShell.classList.add("editor-hidden");
-  toggleEditorButton.textContent = "Editor einblenden";
+  toggleEditorButton.textContent = "Edit";
   toggleEditorButton.setAttribute("aria-expanded", "false");
   addTimelineButton.hidden = true;
   updateProjectDescriptionState();
@@ -417,6 +463,7 @@ function renderTimelines() {
         <div class="timeline-section-actions">
           <button class="secondary-button" type="button" data-action="export-timeline" data-timeline-id="${timelineItem.id}" ${timelineCards.length === 0 ? "disabled" : ""}>Alle als PDF</button>
           <button class="secondary-button timeline-card-add-action" type="button" data-action="add-card" data-timeline-id="${timelineItem.id}">+ Karte</button>
+          <button class="secondary-button timeline-delete-action" type="button" data-action="delete-timeline" data-timeline-id="${timelineItem.id}" ${timelines.length <= 1 ? "disabled" : ""}>Zeitstrahl löschen</button>
         </div>
       </div>
       ${renderCardsForTimeline(timelineItem, timelineCards)}
@@ -722,6 +769,11 @@ timelineList.addEventListener("click", async (event) => {
 
   if (button.dataset.action === "export-timeline") {
     exportTimeline(button.dataset.timelineId);
+    return;
+  }
+
+  if (button.dataset.action === "delete-timeline") {
+    await deleteTimeline(button.dataset.timelineId);
     return;
   }
 

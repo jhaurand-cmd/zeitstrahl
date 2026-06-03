@@ -70,13 +70,15 @@ textarea {
 body.locked .editor-panel,
 body.locked .card-edit-action,
 body.locked .card-delete-action,
-body.locked .timeline-card-add-action {
+body.locked .timeline-card-add-action,
+body.locked .timeline-delete-action {
   display: none;
 }
 
 .app-shell.editor-hidden .card-edit-action,
 .app-shell.editor-hidden .card-delete-action,
-.app-shell.editor-hidden .timeline-card-add-action {
+.app-shell.editor-hidden .timeline-card-add-action,
+.app-shell.editor-hidden .timeline-delete-action {
   display: none;
 }
 
@@ -150,7 +152,7 @@ h2 {
   gap: 24px;
   width: 100%;
   margin: 0 auto;
-  padding: 24px clamp(18px, 4vw, 48px) 48px;
+  padding: 0 0 48px;
 }
 
 .app-shell.editor-hidden {
