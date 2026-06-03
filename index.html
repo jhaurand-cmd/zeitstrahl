@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Schulentwicklungsprojekt</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="app.js?v=20" defer></script>
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="header-brand">
+        <img class="school-logo" src="logo-gsl.jpg" alt="Städtische Gesamtschule Lippstadt">
+        <div class="project-editor">
+          <label class="sr-only" for="projectTitleInput">Titel des Zeitstrahls</label>
+          <textarea id="projectTitleInput" class="project-title-input" rows="1" maxlength="80">Schulentwicklungsprojekt</textarea>
+          <label class="sr-only" for="projectDescriptionInput">Beschreibung des Zeitstrahls</label>
+          <textarea id="projectDescriptionInput" class="project-description-input" rows="2" maxlength="400">Erläuterung</textarea>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="secondary-button" id="toggleEditorButton" type="button" aria-expanded="true">Editor ausblenden</button>
+        <button class="primary-button timeline-create-action" id="addTimelineButton" type="button">+ Zeitstrahl</button>
+      </div>
+    </header>
+
+    <main class="app-shell">
+      <section class="editor-panel" aria-labelledby="formTitle">
+        <div class="panel-heading">
+          <h2 id="formTitle">Karte bearbeiten</h2>
+          <button class="ghost-button" id="cancelEditButton" type="button">Zurücksetzen</button>
+        </div>
+        <p class="active-timeline-label" id="activeTimelineLabel">Zeitstrahl 1</p>
+
+        <form id="cardForm" autocomplete="off">
+          <input id="cardId" type="hidden">
+          <input id="cardTimelineId" type="hidden">
+
+          <label for="titleInput">Überschrift</label>
+          <input id="titleInput" name="title" maxlength="60" required placeholder="Meilenstein, Entscheidung oder Aufgabe">
+          <div class="field-meta"><span id="titleCount">0</span>/60 Zeichen</div>
+
+          <label for="dateInput">Datum</label>
+          <div class="date-control">
+            <input id="dateInput" name="date" type="text" inputmode="numeric" placeholder="TT.MM.JJJJ">
+            <input id="nativeDateInput" class="native-date-input" type="date" tabindex="-1" aria-hidden="true">
+            <button class="date-picker-button" id="datePickerButton" type="button" aria-label="Datum auswählen" title="Datum auswählen">
+              <span aria-hidden="true">&#128197;</span>
+            </button>
+          </div>
+
+          <label for="periodInput">Zeitraum</label>
+          <input id="periodInput" name="period" maxlength="40" placeholder="z. B. Juni bis Juli 2026">
+          <div class="field-meta"><span id="periodCount">0</span>/40 Zeichen</div>
+
+          <label for="sortDateInput">Sortierdatum</label>
+          <div class="date-control">
+            <input id="sortDateInput" name="sortDate" type="text" inputmode="numeric" placeholder="TT.MM.JJJJ">
+            <input id="nativeSortDateInput" class="native-date-input" type="date" tabindex="-1" aria-hidden="true">
+            <button class="date-picker-button" id="sortDatePickerButton" type="button" aria-label="Sortierdatum auswählen" title="Sortierdatum auswählen">
+              <span aria-hidden="true">&#128197;</span>
+            </button>
+          </div>
+
+          <label for="descriptionInput">Text</label>
+          <textarea id="descriptionInput" name="description" maxlength="500" rows="7" required placeholder="Was passiert in diesem Projektschritt?"></textarea>
+          <div class="field-meta"><span id="descriptionCount">0</span>/500 Zeichen</div>
+
+          <fieldset>
+            <legend>Hintergrundfarbe</legend>
+            <div class="color-grid" id="colorGrid"></div>
+          </fieldset>
+
+          <div class="form-actions">
+            <button class="primary-button" type="submit">Speichern</button>
+            <button class="secondary-button" id="deleteCurrentButton" type="button">Löschen</button>
+          </div>
+          <p class="form-status" id="formStatus" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section class="timeline-panel" aria-label="Zeitstrahlen">
+        <div class="timeline-list" id="timelineList" aria-live="polite"></div>
+      </section>
+    </main>
+
+  </body>
+</html>
