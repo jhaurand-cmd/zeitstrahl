@@ -71,14 +71,16 @@ body.locked .editor-panel,
 body.locked .card-edit-action,
 body.locked .card-delete-action,
 body.locked .timeline-card-add-action,
-body.locked .timeline-delete-action {
+body.locked .timeline-delete-action,
+body.locked .data-export-action {
   display: none;
 }
 
 .app-shell.editor-hidden .card-edit-action,
 .app-shell.editor-hidden .card-delete-action,
 .app-shell.editor-hidden .timeline-card-add-action,
-.app-shell.editor-hidden .timeline-delete-action {
+.app-shell.editor-hidden .timeline-delete-action,
+.app-shell.editor-hidden .data-export-action {
   display: none;
 }
 
@@ -355,6 +357,17 @@ button:disabled {
   min-height: 620px;
   padding: 22px;
   overflow: hidden;
+}
+
+.data-status {
+  margin: 0 0 18px;
+  color: #4f6173;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.data-status.error {
+  color: #9d1f1f;
 }
 
 .timeline-list {

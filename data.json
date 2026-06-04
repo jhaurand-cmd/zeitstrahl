@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "exportedAt": "2026-06-04T00:00:00.000Z",
+  "project": {
+    "title": "Schulentwicklungsprojekt",
+    "description": "Erläuterung"
+  },
+  "timelines": [
+    {
+      "id": "timeline-1",
+      "name": "Zeitstrahl 1",
+      "createdAt": "2026-06-04T00:00:00.000Z"
+    }
+  ],
+  "cards": []
+}

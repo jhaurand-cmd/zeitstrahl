@@ -1,7 +1,4 @@
-const DB_NAME = "projectTimelineDb";
-const STORE_NAME = "cards";
-const META_STORE_NAME = "projectMeta";
-const DB_VERSION = 2;
+const DATA_FILE = "data.json";
 const MAX_TIMELINES = 6;
 const DEFAULT_PROJECT_TITLE = "Schulentwicklungsprojekt";
 const DEFAULT_PROJECT_DESCRIPTION = "Erläuterung";
@@ -13,10 +10,15 @@ const colors = [
   { name: "Rose", value: "#ffe2e7" }
 ];
 
-let db;
 let cards = [];
 let timelines = [];
 let activeTimelineId = "";
+let projectMeta = {
+  title: DEFAULT_PROJECT_TITLE,
+  description: DEFAULT_PROJECT_DESCRIPTION
+};
+let dataLoadedAt = "";
+let hasUnsavedExport = false;
 
 const form = document.querySelector("#cardForm");
 const cardIdInput = document.querySelector("#cardId");
@@ -38,112 +40,16 @@ const timelineList = document.querySelector("#timelineList");
 const deleteCurrentButton = document.querySelector("#deleteCurrentButton");
 const cancelEditButton = document.querySelector("#cancelEditButton");
 const addTimelineButton = document.querySelector("#addTimelineButton");
+const exportDataButton = document.querySelector("#exportDataButton");
 const toggleEditorButton = document.querySelector("#toggleEditorButton");
 const appShell = document.querySelector(".app-shell");
 const activeTimelineLabel = document.querySelector("#activeTimelineLabel");
 const projectTitleInput = document.querySelector("#projectTitleInput");
 const projectDescriptionInput = document.querySelector("#projectDescriptionInput");
 const formStatus = document.querySelector("#formStatus");
+const dataStatus = document.querySelector("#dataStatus");
 const saveButton = form.querySelector("button[type='submit']");
 let isUnlocked = true;
-
-function openDatabase() {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-    request.onupgradeneeded = () => {
-      const database = request.result;
-      if (!database.objectStoreNames.contains(STORE_NAME)) {
-        const store = database.createObjectStore(STORE_NAME, {
-          keyPath: "id",
-          autoIncrement: true
-        });
-        store.createIndex("date", "date", { unique: false });
-      }
-
-      if (!database.objectStoreNames.contains(META_STORE_NAME)) {
-        database.createObjectStore(META_STORE_NAME, { keyPath: "key" });
-      }
-    };
-
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-}
-
-function transaction(mode = "readonly") {
-  return db.transaction(STORE_NAME, mode).objectStore(STORE_NAME);
-}
-
-function metaTransaction(mode = "readonly") {
-  return db.transaction(META_STORE_NAME, mode).objectStore(META_STORE_NAME);
-}
-
-function getAllCards() {
-  return new Promise((resolve, reject) => {
-    const request = transaction().getAll();
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-}
-
-function saveCard(card) {
-  return new Promise((resolve, reject) => {
-    const request = transaction("readwrite").put(card);
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-}
-
-function removeCard(id) {
-  return new Promise((resolve, reject) => {
-    const request = transaction("readwrite").delete(id);
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error);
-  });
-}
-
-function removeCards(ids) {
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    const store = tx.objectStore(STORE_NAME);
-    ids.forEach((id) => store.delete(id));
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
-}
-
-function getProjectMeta() {
-  return new Promise((resolve, reject) => {
-    const request = metaTransaction().get("project");
-    request.onsuccess = () => resolve(request.result?.value || {});
-    request.onerror = () => reject(request.error);
-  });
-}
-
-function saveProjectMeta(value) {
-  return new Promise((resolve, reject) => {
-    const request = metaTransaction("readwrite").put({ key: "project", value });
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error);
-  });
-}
-
-function getTimelinesMeta() {
-  return new Promise((resolve, reject) => {
-    const request = metaTransaction().get("timelines");
-    request.onsuccess = () => resolve(request.result?.value || null);
-    request.onerror = () => reject(request.error);
-  });
-}
-
-function saveTimelinesMeta(value) {
-  return new Promise((resolve, reject) => {
-    const request = metaTransaction("readwrite").put({ key: "timelines", value });
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error);
-  });
-}
 
 function createTimeline(name) {
   return {
@@ -153,18 +59,178 @@ function createTimeline(name) {
   };
 }
 
-async function loadTimelines() {
-  const savedTimelines = await getTimelinesMeta();
-  timelines = Array.isArray(savedTimelines) && savedTimelines.length > 0
-    ? savedTimelines.slice(0, MAX_TIMELINES)
-    : [createTimeline("Zeitstrahl 1")];
-  activeTimelineId = timelines[0].id;
+function normalizeProjectMeta(value = {}) {
+  return {
+    title: String(value.title || DEFAULT_PROJECT_TITLE).slice(0, 80),
+    description: String(value.description ?? DEFAULT_PROJECT_DESCRIPTION).slice(0, 400)
+  };
+}
 
-  if (!savedTimelines || savedTimelines.length === 0 || savedTimelines.length > MAX_TIMELINES) {
-    await saveTimelinesMeta(timelines);
+function normalizeTimelines(value) {
+  const cleanTimelines = Array.isArray(value)
+    ? value
+        .filter((item) => item && item.id)
+        .slice(0, MAX_TIMELINES)
+        .map((item, index) => ({
+          id: String(item.id),
+          name: String(item.name || `Zeitstrahl ${index + 1}`).slice(0, 60),
+          createdAt: item.createdAt || new Date().toISOString()
+        }))
+    : [];
+
+  return cleanTimelines.length > 0 ? cleanTimelines : [createTimeline("Zeitstrahl 1")];
+}
+
+function normalizeCards(value, validTimelineIds) {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .filter((card) => card && Number.isFinite(Number(card.id)))
+    .map((card) => ({
+      id: Number(card.id),
+      title: String(card.title || "").slice(0, 60),
+      date: String(card.date || ""),
+      period: String(card.period || "").slice(0, 40),
+      sortDate: String(card.sortDate || ""),
+      description: String(card.description || "").slice(0, 500),
+      color: availableCardColor(card.color),
+      timelineId: validTimelineIds.has(card.timelineId) ? card.timelineId : timelines[0]?.id,
+      updatedAt: card.updatedAt || ""
+    }))
+    .filter((card) => card.title && (card.date || card.period) && card.description);
+}
+
+function currentDataSnapshot() {
+  return {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    project: projectMeta,
+    timelines,
+    cards: sortCards(cards)
+  };
+}
+
+function formatLoadedAt(value) {
+  if (!value) return "";
+  return new Intl.DateTimeFormat("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(new Date(value));
+}
+
+function updateDataStatus(message, isError = false) {
+  const status = message || `Datenstand: ${formatLoadedAt(dataLoadedAt)}`;
+  dataStatus.textContent = hasUnsavedExport && !isError
+    ? `${status} - Änderungen noch als data.json exportieren.`
+    : status;
+  dataStatus.classList.toggle("error", isError);
+}
+
+function markDataChanged() {
+  hasUnsavedExport = true;
+  updateDataStatus();
+}
+
+async function loadSharedData() {
+  const response = await fetch(`${DATA_FILE}?t=${Date.now()}`, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`${DATA_FILE} konnte nicht geladen werden (${response.status}).`);
   }
 
+  const data = await response.json();
+  projectMeta = normalizeProjectMeta(data.project);
+  timelines = normalizeTimelines(data.timelines);
+  const validTimelineIds = new Set(timelines.map((item) => item.id));
+  cards = normalizeCards(data.cards, validTimelineIds);
+  activeTimelineId = timelines[0].id;
+  dataLoadedAt = data.exportedAt || new Date().toISOString();
+  hasUnsavedExport = false;
+  updateDataStatus();
   updateActiveTimelineLabel();
+}
+
+function nextCardId() {
+  return cards.reduce((maxId, card) => Math.max(maxId, Number(card.id) || 0), 0) + 1;
+}
+
+async function saveCard(card) {
+  if (!card.id) {
+    card.id = nextCardId();
+  }
+
+  const existingIndex = cards.findIndex((item) => item.id === card.id);
+  if (existingIndex >= 0) {
+    cards[existingIndex] = card;
+  } else {
+    cards.push(card);
+  }
+  markDataChanged();
+  return card.id;
+}
+
+async function removeCard(id) {
+  cards = cards.filter((card) => card.id !== id);
+  markDataChanged();
+}
+
+async function removeCards(ids) {
+  const idsToRemove = new Set(ids);
+  cards = cards.filter((card) => !idsToRemove.has(card.id));
+  markDataChanged();
+}
+
+async function saveProjectMeta(value) {
+  const nextMeta = normalizeProjectMeta(value);
+  if (JSON.stringify(projectMeta) !== JSON.stringify(nextMeta)) {
+    projectMeta = nextMeta;
+    markDataChanged();
+  }
+}
+
+async function saveTimelinesMeta(value) {
+  const nextTimelines = normalizeTimelines(value);
+  if (JSON.stringify(timelines) !== JSON.stringify(nextTimelines)) {
+    timelines = nextTimelines;
+    markDataChanged();
+  }
+}
+
+function downloadJson(data, fileName) {
+  const blob = new Blob([`${JSON.stringify(data, null, 2)}\n`], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function syncVisibleDataBeforeExport() {
+  projectMeta = normalizeProjectMeta({
+    title: projectTitleInput.value.trim() || DEFAULT_PROJECT_TITLE,
+    description: projectDescriptionInput.value.trim()
+  });
+
+  timelineList.querySelectorAll("input[data-action='rename-timeline']").forEach((input) => {
+    const timelineItem = timelines.find((item) => item.id === input.dataset.timelineId);
+    if (timelineItem) {
+      timelineItem.name = input.value.trim().slice(0, 60) || "Zeitstrahl";
+    }
+  });
+  updateActiveTimelineLabel();
+}
+
+function exportSharedData() {
+  syncVisibleDataBeforeExport();
+  downloadJson(currentDataSnapshot(), DATA_FILE);
+  hasUnsavedExport = false;
+  dataLoadedAt = new Date().toISOString();
+  updateDataStatus("Neue data.json wurde heruntergeladen.");
 }
 
 function sortCards(list) {
@@ -344,7 +410,7 @@ async function addTimeline() {
 
   const timelineItem = createTimeline(`Zeitstrahl ${timelines.length + 1}`);
   timelines.push(timelineItem);
-  await saveTimelinesMeta(timelines);
+  markDataChanged();
   activateTimeline(timelineItem.id);
   renderTimelines();
   startNewCard(timelineItem.id);
@@ -373,11 +439,10 @@ async function deleteTimeline(timelineId) {
   if (!confirm(message)) return;
 
   timelines = timelines.filter((item) => item.id !== timelineId);
-  await saveTimelinesMeta(timelines);
+  markDataChanged();
 
   if (timelineCards.length > 0) {
     await removeCards(timelineCards.map((card) => card.id));
-    cards = cards.filter((card) => cardTimelineId(card) !== timelineId);
   }
 
   activateTimeline(activeTimelineId === timelineId ? timelines[0].id : activeTimelineId);
@@ -392,6 +457,7 @@ function showEditor() {
   toggleEditorButton.textContent = "Edit";
   toggleEditorButton.setAttribute("aria-expanded", "true");
   addTimelineButton.hidden = false;
+  exportDataButton.hidden = false;
   updateProjectDescriptionState();
   renderTimelines();
 }
@@ -401,6 +467,7 @@ function hideEditor() {
   toggleEditorButton.textContent = "Edit";
   toggleEditorButton.setAttribute("aria-expanded", "false");
   addTimelineButton.hidden = true;
+  exportDataButton.hidden = true;
   updateProjectDescriptionState();
   renderTimelines();
 }
@@ -472,12 +539,11 @@ function renderTimelines() {
 }
 
 async function refreshCards() {
-  cards = await getAllCards();
   renderTimelines();
 }
 
 async function loadProjectMeta() {
-  const meta = await getProjectMeta();
+  const meta = projectMeta;
   const title = meta.title && meta.title !== "Projekt-Zeitstrahl"
     ? meta.title
     : DEFAULT_PROJECT_TITLE;
@@ -497,6 +563,7 @@ function applyEditState() {
   document.body.classList.remove("locked");
   addTimelineButton.disabled = timelines.length >= MAX_TIMELINES;
   addTimelineButton.hidden = appShell.classList.contains("editor-hidden");
+  exportDataButton.hidden = appShell.classList.contains("editor-hidden");
   toggleEditorButton.disabled = !isUnlocked;
   updateProjectDescriptionState();
 
@@ -881,6 +948,7 @@ projectTitleInput.addEventListener("input", () => {
   persistProjectMeta();
 });
 projectDescriptionInput.addEventListener("input", persistProjectMeta);
+exportDataButton.addEventListener("click", exportSharedData);
 deleteCurrentButton.addEventListener("click", async () => {
   if (!cardIdInput.value) return;
   await deleteById(Number(cardIdInput.value));
@@ -889,7 +957,8 @@ window.timelineProjectApp = {
   buildPdf,
   exportCard,
   exportAllCards,
-  exportTimeline
+  exportTimeline,
+  exportSharedData
 };
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -898,13 +967,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   deleteCurrentButton.disabled = true;
 
   try {
-    db = await openDatabase();
+    await loadSharedData();
     await loadProjectMeta();
-    await loadTimelines();
     applyEditState();
     await refreshCards();
   } catch (error) {
-    timelineList.innerHTML = `<p class="timeline-empty">Die lokale Datenbank konnte nicht geöffnet werden.</p>`;
+    timelineList.innerHTML = `<p class="timeline-empty">Die zentrale Datendatei konnte nicht geöffnet werden.</p>`;
+    updateDataStatus(`data.json konnte nicht geladen werden: ${error?.message || error}`, true);
     console.error(error);
   }
 });
