@@ -3,9 +3,9 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Schulentwicklungsprojekt</title>
-    <link rel="stylesheet" href="styles.css">
-    <script src="app.js?v=24" defer></script>
+    <title>Schulentwicklungsboard</title>
+    <link rel="stylesheet" href="styles.css?v=9">
+    <script src="app.js?v=41" defer></script>
   </head>
   <body>
     <header class="app-header">
@@ -13,15 +13,19 @@
         <img class="school-logo" src="logo-gsl.jpg" alt="Städtische Gesamtschule Lippstadt">
         <div class="project-editor">
           <label class="sr-only" for="projectTitleInput">Titel des Zeitstrahls</label>
-          <textarea id="projectTitleInput" class="project-title-input" rows="1" maxlength="80">Schulentwicklungsprojekt</textarea>
+          <textarea id="projectTitleInput" class="project-title-input" rows="1" maxlength="80">Schulentwicklungsboard</textarea>
           <label class="sr-only" for="projectDescriptionInput">Beschreibung des Zeitstrahls</label>
-          <textarea id="projectDescriptionInput" class="project-description-input" rows="2" maxlength="400">Erläuterung</textarea>
+          <textarea id="projectDescriptionInput" class="project-description-input" rows="1" maxlength="400">Erläuterung</textarea>
+          <p class="data-status" id="dataStatus" role="status" aria-live="polite">Lade Daten...</p>
         </div>
       </div>
       <div class="header-actions">
-        <button class="secondary-button" id="toggleEditorButton" type="button" aria-expanded="true">Edit</button>
+        <button class="secondary-button" id="toggleEditorButton" type="button" aria-expanded="false">Edit</button>
+        <button class="secondary-button" id="exportAllPdfButton" type="button">PDF</button>
         <button class="primary-button timeline-create-action" id="addTimelineButton" type="button">+ Zeitstrahl</button>
+        <button class="secondary-button data-export-action" id="importDataButton" type="button">Daten importieren</button>
         <button class="secondary-button data-export-action" id="exportDataButton" type="button">Daten exportieren</button>
+        <input id="importDataInput" type="file" accept="application/json,.json" hidden>
       </div>
     </header>
 
@@ -81,7 +85,6 @@
       </section>
 
       <section class="timeline-panel" aria-label="Zeitstrahlen">
-        <p class="data-status" id="dataStatus" role="status" aria-live="polite">Lade Daten...</p>
         <div class="timeline-list" id="timelineList" aria-live="polite"></div>
       </section>
     </main>

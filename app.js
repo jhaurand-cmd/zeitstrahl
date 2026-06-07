@@ -1,6 +1,7 @@
 const DATA_FILE = "data.json";
 const MAX_TIMELINES = 6;
-const DEFAULT_PROJECT_TITLE = "Schulentwicklungsprojekt";
+const EDIT_PASSWORD = "GSL!";
+const DEFAULT_PROJECT_TITLE = "Schulentwicklungsboard";
 const DEFAULT_PROJECT_DESCRIPTION = "Erläuterung";
 
 const colors = [
@@ -40,6 +41,9 @@ const timelineList = document.querySelector("#timelineList");
 const deleteCurrentButton = document.querySelector("#deleteCurrentButton");
 const cancelEditButton = document.querySelector("#cancelEditButton");
 const addTimelineButton = document.querySelector("#addTimelineButton");
+const exportAllPdfButton = document.querySelector("#exportAllPdfButton");
+const importDataButton = document.querySelector("#importDataButton");
+const importDataInput = document.querySelector("#importDataInput");
 const exportDataButton = document.querySelector("#exportDataButton");
 const toggleEditorButton = document.querySelector("#toggleEditorButton");
 const appShell = document.querySelector(".app-shell");
@@ -49,7 +53,7 @@ const projectDescriptionInput = document.querySelector("#projectDescriptionInput
 const formStatus = document.querySelector("#formStatus");
 const dataStatus = document.querySelector("#dataStatus");
 const saveButton = form.querySelector("button[type='submit']");
-let isUnlocked = true;
+let isUnlocked = false;
 
 function createTimeline(name) {
   return {
@@ -73,7 +77,7 @@ function normalizeTimelines(value) {
         .slice(0, MAX_TIMELINES)
         .map((item, index) => ({
           id: String(item.id),
-          name: String(item.name || `Zeitstrahl ${index + 1}`).slice(0, 60),
+          name: String(item.name || `Zeitstrahl ${index + 1}`).slice(0, 100),
           createdAt: item.createdAt || new Date().toISOString()
         }))
     : [];
@@ -117,12 +121,13 @@ function formatLoadedAt(value) {
     month: "2-digit",
     year: "numeric",
     hour: "2-digit",
-    minute: "2-digit"
+    minute: "2-digit",
+    second: "2-digit"
   }).format(new Date(value));
 }
 
 function updateDataStatus(message, isError = false) {
-  const status = message || `Datenstand: ${formatLoadedAt(dataLoadedAt)}`;
+  const status = message || `Stand: ${formatLoadedAt(dataLoadedAt)}`;
   dataStatus.textContent = hasUnsavedExport && !isError
     ? `${status} - Änderungen noch als data.json exportieren.`
     : status;
@@ -134,22 +139,26 @@ function markDataChanged() {
   updateDataStatus();
 }
 
+function latestCardUpdatedAt(cardList = cards) {
+  return cardList.reduce((latest, card) => {
+    if (!card.updatedAt) return latest;
+    const timestamp = new Date(card.updatedAt).getTime();
+    return Number.isFinite(timestamp) && timestamp > latest ? timestamp : latest;
+  }, 0);
+}
+
+function updateDataLoadedAtFromCards(cardList = cards, fallback = "") {
+  const latest = latestCardUpdatedAt(cardList);
+  dataLoadedAt = latest ? new Date(latest).toISOString() : fallback;
+}
+
 async function loadSharedData() {
   const response = await fetch(`${DATA_FILE}?t=${Date.now()}`, { cache: "no-store" });
   if (!response.ok) {
     throw new Error(`${DATA_FILE} konnte nicht geladen werden (${response.status}).`);
   }
 
-  const data = await response.json();
-  projectMeta = normalizeProjectMeta(data.project);
-  timelines = normalizeTimelines(data.timelines);
-  const validTimelineIds = new Set(timelines.map((item) => item.id));
-  cards = normalizeCards(data.cards, validTimelineIds);
-  activeTimelineId = timelines[0].id;
-  dataLoadedAt = data.exportedAt || new Date().toISOString();
-  hasUnsavedExport = false;
-  updateDataStatus();
-  updateActiveTimelineLabel();
+  applySharedData(await response.json());
 }
 
 function nextCardId() {
@@ -167,18 +176,21 @@ async function saveCard(card) {
   } else {
     cards.push(card);
   }
+  dataLoadedAt = card.updatedAt || new Date().toISOString();
   markDataChanged();
   return card.id;
 }
 
 async function removeCard(id) {
   cards = cards.filter((card) => card.id !== id);
+  dataLoadedAt = new Date().toISOString();
   markDataChanged();
 }
 
 async function removeCards(ids) {
   const idsToRemove = new Set(ids);
   cards = cards.filter((card) => !idsToRemove.has(card.id));
+  dataLoadedAt = new Date().toISOString();
   markDataChanged();
 }
 
@@ -219,7 +231,7 @@ function syncVisibleDataBeforeExport() {
   timelineList.querySelectorAll("input[data-action='rename-timeline']").forEach((input) => {
     const timelineItem = timelines.find((item) => item.id === input.dataset.timelineId);
     if (timelineItem) {
-      timelineItem.name = input.value.trim().slice(0, 60) || "Zeitstrahl";
+      timelineItem.name = input.value.trim().slice(0, 100) || "Zeitstrahl";
     }
   });
   updateActiveTimelineLabel();
@@ -229,8 +241,37 @@ function exportSharedData() {
   syncVisibleDataBeforeExport();
   downloadJson(currentDataSnapshot(), DATA_FILE);
   hasUnsavedExport = false;
-  dataLoadedAt = new Date().toISOString();
   updateDataStatus("Neue data.json wurde heruntergeladen.");
+}
+
+function applySharedData(data, { markChanged = false } = {}) {
+  projectMeta = normalizeProjectMeta(data.project);
+  timelines = normalizeTimelines(data.timelines);
+  const validTimelineIds = new Set(timelines.map((item) => item.id));
+  cards = normalizeCards(data.cards, validTimelineIds);
+  activeTimelineId = timelines[0].id;
+  updateDataLoadedAtFromCards(cards, data.exportedAt || new Date().toISOString());
+  hasUnsavedExport = markChanged;
+  loadProjectMeta();
+  activateTimeline(activeTimelineId);
+  if (isUnlocked) {
+    resetForm();
+  }
+  renderTimelines();
+  updateDataStatus(markChanged ? "data.json importiert." : "");
+}
+
+async function importSharedData(file) {
+  if (!requireUnlocked()) return;
+  if (!file) return;
+
+  try {
+    const data = JSON.parse(await file.text());
+    applySharedData(data, { markChanged: true });
+  } catch (error) {
+    console.error(error);
+    updateDataStatus(`data.json konnte nicht importiert werden: ${error?.message || error}`, true);
+  }
 }
 
 function sortCards(list) {
@@ -339,7 +380,9 @@ function availableCardColor(value) {
 }
 
 function requireUnlocked() {
-  return true;
+  if (isUnlocked) return true;
+  setFormStatus("Bitte zuerst den Edit-Modus mit Kennwort freischalten.", true);
+  return false;
 }
 
 function activeTimeline() {
@@ -457,6 +500,7 @@ function showEditor() {
   toggleEditorButton.textContent = "Edit";
   toggleEditorButton.setAttribute("aria-expanded", "true");
   addTimelineButton.hidden = false;
+  importDataButton.hidden = false;
   exportDataButton.hidden = false;
   updateProjectDescriptionState();
   renderTimelines();
@@ -467,13 +511,31 @@ function hideEditor() {
   toggleEditorButton.textContent = "Edit";
   toggleEditorButton.setAttribute("aria-expanded", "false");
   addTimelineButton.hidden = true;
+  importDataButton.hidden = true;
   exportDataButton.hidden = true;
   updateProjectDescriptionState();
   renderTimelines();
 }
 
+function unlockEditor() {
+  const password = prompt("Kennwort für den Edit-Modus:");
+  if (password !== EDIT_PASSWORD) {
+    setFormStatus("Kennwort nicht korrekt.", true);
+    return false;
+  }
+
+  isUnlocked = true;
+  document.body.classList.remove("locked");
+  setFormStatus("");
+  showEditor();
+  return true;
+}
+
 function toggleEditor() {
-  if (!requireUnlocked()) return;
+  if (!isUnlocked) {
+    unlockEditor();
+    return;
+  }
   if (appShell.classList.contains("editor-hidden")) {
     showEditor();
   } else {
@@ -502,7 +564,6 @@ function renderCardsForTimeline(timelineItem, timelineCards) {
             <h3 class="card-title">${escapeHtml(card.title)}</h3>
             <div class="icon-actions">
               <button class="icon-button card-edit-action" type="button" data-action="edit" data-id="${card.id}" title="Bearbeiten" aria-label="Karte bearbeiten">&#9998;</button>
-              <button class="icon-button" type="button" data-action="pdf" data-id="${card.id}" title="Als PDF exportieren" aria-label="Karte als PDF exportieren">PDF</button>
               <button class="icon-button card-delete-action" type="button" data-action="delete" data-id="${card.id}" title="Löschen" aria-label="Karte löschen">&times;</button>
             </div>
           </div>
@@ -516,6 +577,7 @@ function renderCardsForTimeline(timelineItem, timelineCards) {
 function renderTimelines() {
   cards = sortCards(cards);
   addTimelineButton.disabled = timelines.length >= MAX_TIMELINES;
+  exportAllPdfButton.disabled = cards.length === 0;
   addTimelineButton.hidden = appShell.classList.contains("editor-hidden");
   const isViewMode = appShell.classList.contains("editor-hidden");
 
@@ -525,10 +587,10 @@ function renderTimelines() {
       <div class="timeline-section-header">
         <div>
           <label class="sr-only" for="timelineName-${escapeHtml(timelineItem.id)}">Name des Zeitstrahls</label>
-          <input class="timeline-title-input" id="timelineName-${escapeHtml(timelineItem.id)}" data-action="rename-timeline" data-timeline-id="${escapeHtml(timelineItem.id)}" maxlength="60" value="${escapeHtml(timelineItem.name)}" ${isViewMode ? "readonly" : ""}>
+          <input class="timeline-title-input" id="timelineName-${escapeHtml(timelineItem.id)}" data-action="rename-timeline" data-timeline-id="${escapeHtml(timelineItem.id)}" maxlength="100" value="${escapeHtml(timelineItem.name)}" ${isViewMode ? "readonly" : ""}>
         </div>
         <div class="timeline-section-actions">
-          <button class="secondary-button" type="button" data-action="export-timeline" data-timeline-id="${timelineItem.id}" ${timelineCards.length === 0 ? "disabled" : ""}>Alle als PDF</button>
+          <button class="secondary-button" type="button" data-action="export-timeline" data-timeline-id="${timelineItem.id}" ${timelineCards.length === 0 ? "disabled" : ""}>PDF</button>
           <button class="secondary-button timeline-card-add-action" type="button" data-action="add-card" data-timeline-id="${timelineItem.id}">+ Karte</button>
           <button class="secondary-button timeline-delete-action" type="button" data-action="delete-timeline" data-timeline-id="${timelineItem.id}" ${timelines.length <= 1 ? "disabled" : ""}>Zeitstrahl löschen</button>
         </div>
@@ -560,18 +622,23 @@ async function loadProjectMeta() {
 }
 
 function applyEditState() {
-  document.body.classList.remove("locked");
+  document.body.classList.toggle("locked", !isUnlocked);
+  if (!isUnlocked) {
+    appShell.classList.add("editor-hidden");
+  }
   addTimelineButton.disabled = timelines.length >= MAX_TIMELINES;
+  exportAllPdfButton.disabled = cards.length === 0;
   addTimelineButton.hidden = appShell.classList.contains("editor-hidden");
+  importDataButton.hidden = appShell.classList.contains("editor-hidden");
   exportDataButton.hidden = appShell.classList.contains("editor-hidden");
-  toggleEditorButton.disabled = !isUnlocked;
+  toggleEditorButton.disabled = false;
   updateProjectDescriptionState();
 
   renderTimelines();
 }
 
 function updateProjectDescriptionState() {
-  const isViewMode = appShell.classList.contains("editor-hidden");
+  const isViewMode = !isUnlocked || appShell.classList.contains("editor-hidden");
   projectTitleInput.readOnly = isViewMode;
   projectDescriptionInput.readOnly = isViewMode;
 }
@@ -605,13 +672,13 @@ function safeFilePart(text) {
     .slice(0, 40) || "karte";
 }
 
-function pdfText(value) {
-  const bytes = [0xfe, 0xff];
-  for (const char of value) {
-    const code = char.charCodeAt(0);
-    bytes.push((code >> 8) & 255, code & 255);
-  }
-  return `<${bytes.map((byte) => byte.toString(16).padStart(2, "0")).join("")}>`;
+function fileTimestamp(date = new Date()) {
+  const pad = (value) => String(value).padStart(2, "0");
+  return [
+    pad(date.getMonth() + 1),
+    pad(date.getDate()),
+    date.getFullYear()
+  ].join("-") + `_${pad(date.getHours())}-${pad(date.getMinutes())}-${pad(date.getSeconds())}`;
 }
 
 function wrapText(value, maxChars) {
@@ -635,54 +702,189 @@ function wrapText(value, maxChars) {
   return lines.filter(Boolean);
 }
 
-function cardContentStream(card) {
-  const titleLines = wrapText(card.title, 36).slice(0, 2);
-  const descriptionLines = wrapText(card.description, 82).slice(0, 24);
+function pdfString(value) {
+  return `(${String(value)
+    .replace(/ä/g, "ae")
+    .replace(/ö/g, "oe")
+    .replace(/ü/g, "ue")
+    .replace(/Ä/g, "Ae")
+    .replace(/Ö/g, "Oe")
+    .replace(/Ü/g, "Ue")
+    .replace(/ß/g, "ss")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\x20-\x7E]/g, "")
+    .replace(/\\/g, "\\\\")
+    .replace(/\(/g, "\\(")
+    .replace(/\)/g, "\\)")})`;
+}
+
+function pdfTextLine(commands, text, x, y, font = "F1", size = 11) {
+  commands.push(`BT /${font} ${size} Tf ${x} ${y} Td ${pdfString(text)} Tj ET`);
+}
+
+function pdfPlainText(value) {
+  return String(value)
+    .replace(/ä/g, "ae")
+    .replace(/ö/g, "oe")
+    .replace(/ü/g, "ue")
+    .replace(/Ä/g, "Ae")
+    .replace(/Ö/g, "Oe")
+    .replace(/Ü/g, "Ue")
+    .replace(/ß/g, "ss")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\x20-\x7E]/g, "");
+}
+
+function pdfCenteredTextLine(commands, text, centerX, y, font = "F1", size = 11) {
+  const width = pdfPlainText(text).length * size * (font === "F2" ? 0.58 : 0.52);
+  pdfTextLine(commands, text, centerX - (width / 2), y, font, size);
+}
+
+function getJpegSize(bytes) {
+  let index = 2;
+  while (index < bytes.length) {
+    if (bytes[index] !== 0xff) break;
+    const marker = bytes[index + 1];
+    const length = (bytes[index + 2] << 8) + bytes[index + 3];
+    if (marker >= 0xc0 && marker <= 0xc3) {
+      return {
+        height: (bytes[index + 5] << 8) + bytes[index + 6],
+        width: (bytes[index + 7] << 8) + bytes[index + 8]
+      };
+    }
+    index += 2 + length;
+  }
+  return { width: 260, height: 120 };
+}
+
+async function loadPdfLogo() {
+  const response = await fetch(`logo-gsl.jpg?t=${Date.now()}`, { cache: "no-store" });
+  if (!response.ok) return null;
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  return { bytes, ...getJpegSize(bytes) };
+}
+
+function pdfHeaderCommands({ headerTitle, dataStatusText, pageNumber, pageCount, logo }) {
   const commands = [
-    "q",
     "1 1 1 rg",
-    "56 94 483 690 re f",
-    "0 0 0 RG",
-    "56 94 483 690 re S",
-    "Q",
+    "0 0 595.28 841.89 re f",
     "0 0 0 rg"
   ];
 
-  let y = 742;
+  if (logo) {
+    const imageWidth = 96;
+    const imageHeight = imageWidth * (logo.height / logo.width);
+    commands.push("q");
+    commands.push(`${imageWidth.toFixed(2)} 0 0 ${imageHeight.toFixed(2)} 52 ${(798 - imageHeight).toFixed(2)} cm`);
+    commands.push("/ImLogo Do");
+    commands.push("Q");
+  }
+
+  pdfTextLine(commands, headerTitle, 166, 792, "F2", 18);
+  pdfTextLine(commands, dataStatusText, 166, 770, "F1", 9);
+  commands.push("0.72 0.76 0.80 RG");
+  commands.push("0.8 w");
+  commands.push("52 742 m 543 742 l S");
+  commands.push("0 0 0 rg");
+  pdfTextLine(commands, `Seite ${pageNumber} / ${pageCount}`, 482, 28, "F1", 9);
+
+  return commands;
+}
+
+function cardContentCommands(card, indexOnPage, topY) {
+  const marginX = 64;
+  const bottomY = 62;
+  const sectionHeight = (topY - bottomY) / 3;
+  const sectionTop = topY - (indexOnPage * sectionHeight) - 18;
+  const commands = [
+    "0 0 0 rg"
+  ];
+  const label = timelineLabel(card);
+  const titleLines = wrapText(card.title, 44).slice(0, 2);
+  const descriptionLines = wrapText(card.description, 86).slice(0, 6);
+
+  let y = sectionTop;
   titleLines.forEach((line) => {
-    commands.push("BT /F2 22 Tf 70 " + y + " Td " + pdfText(line) + " Tj ET");
-    y -= 28;
+    pdfTextLine(commands, line, marginX, y, "F2", 17);
+    y -= 22;
   });
 
-  commands.push("BT /F2 13 Tf 70 " + (y - 8) + " Td " + pdfText(timelineLabel(card)) + " Tj ET");
-  y -= 46;
+  y -= 4;
+  if (label) {
+    pdfTextLine(commands, label, marginX, y, "F2", 10);
+    y -= 28;
+  } else {
+    y -= 12;
+  }
 
   descriptionLines.forEach((line) => {
-    commands.push("BT /F1 12 Tf 70 " + y + " Td " + pdfText(line) + " Tj ET");
-    y -= 18;
+    pdfTextLine(commands, line, marginX, y, "F1", 10.5);
+    y -= 15;
+  });
+
+  if (indexOnPage < 2) {
+    const lineWidth = 595.28 * 0.66;
+    const lineX = (595.28 - lineWidth) / 2;
+    const lineY = topY - ((indexOnPage + 1) * sectionHeight);
+    commands.push("0.72 0.76 0.80 RG");
+    commands.push("0.8 w");
+    commands.push(`${lineX.toFixed(2)} ${lineY.toFixed(2)} m ${(lineX + lineWidth).toFixed(2)} ${lineY.toFixed(2)} l S`);
+    commands.push("0 0 0 rg");
+  }
+
+  return commands;
+}
+
+function pageContentStream(page) {
+  const commands = pdfHeaderCommands(page);
+  const cardTopY = 672;
+
+  pdfCenteredTextLine(commands, page.timelineTitle, 297.64, 700, "F2", 18);
+
+  page.cards.forEach((card, index) => {
+    commands.push(...cardContentCommands(card, index, cardTopY));
   });
 
   return commands.join("\n");
 }
 
-function buildPdf(cardList) {
+async function buildPdf(pages) {
   const encoder = new TextEncoder();
+  const logo = await loadPdfLogo();
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",
     "",
     "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
     "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>"
   ];
+  let logoObjectId = null;
+  if (logo) {
+    logoObjectId = objects.length + 1;
+    objects.push([
+      encoder.encode(`<< /Type /XObject /Subtype /Image /Width ${logo.width} /Height ${logo.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${logo.bytes.length} >>\nstream\n`),
+      logo.bytes,
+      encoder.encode("\nendstream")
+    ]);
+  }
   const pageObjectIds = [];
+  const pageCount = pages.length;
 
-  cardList.forEach((card) => {
-    const content = cardContentStream(card);
+  pages.forEach((page, index) => {
+    const content = pageContentStream({
+      ...page,
+      logo,
+      pageNumber: index + 1,
+      pageCount
+    });
     const contentId = objects.length + 1;
     objects.push(`<< /Length ${encoder.encode(content).length} >>\nstream\n${content}\nendstream`);
 
     const pageId = objects.length + 1;
     pageObjectIds.push(pageId);
-    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${contentId} 0 R >>`);
+    const xObjects = logoObjectId ? `/XObject << /ImLogo ${logoObjectId} 0 R >>` : "";
+    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> ${xObjects} >> /Contents ${contentId} 0 R >>`);
   });
 
   objects[1] = `<< /Type /Pages /Kids [${pageObjectIds.map((id) => `${id} 0 R`).join(" ")}] /Count ${pageObjectIds.length} >>`;
@@ -693,9 +895,14 @@ function buildPdf(cardList) {
 
   objects.forEach((object, index) => {
     offsets[index + 1] = position;
-    const chunk = encoder.encode(`${index + 1} 0 obj\n${object}\nendobj\n`);
-    chunks.push(chunk);
-    position += chunk.length;
+    const objectHeader = encoder.encode(`${index + 1} 0 obj\n`);
+    const objectBody = Array.isArray(object) ? object : [encoder.encode(object)];
+    const objectFooter = encoder.encode("\nendobj\n");
+    const objectLength = objectHeader.length
+      + objectBody.reduce((sum, part) => sum + part.length, 0)
+      + objectFooter.length;
+    chunks.push(objectHeader, ...objectBody, objectFooter);
+    position += objectLength;
   });
 
   const xrefStart = position;
@@ -715,8 +922,41 @@ function buildPdf(cardList) {
   return new Blob(chunks, { type: "application/pdf" });
 }
 
-function downloadPdf(cardList, fileName) {
-  const url = URL.createObjectURL(buildPdf(cardList));
+function chunkCards(cardList) {
+  const chunks = [];
+  for (let index = 0; index < cardList.length; index += 3) {
+    chunks.push(cardList.slice(index, index + 3));
+  }
+  return chunks;
+}
+
+function buildAllPdfPages() {
+  const headerTitle = projectMeta.title || DEFAULT_PROJECT_TITLE;
+  const dataStatusText = `Stand: ${formatLoadedAt(dataLoadedAt)}`;
+  return timelines.flatMap((timelineItem) => {
+    const timelineCards = cards.filter((card) => cardTimelineId(card) === timelineItem.id);
+    return chunkCards(timelineCards).map((pageCards) => ({
+      headerTitle,
+      dataStatusText,
+      timelineTitle: timelineItem.name,
+      cards: pageCards
+    }));
+  });
+}
+
+function buildTimelinePdfPages(timelineItem, timelineCards) {
+  const dataStatusText = `Stand: ${formatLoadedAt(dataLoadedAt)}`;
+  const headerTitle = projectMeta.title || DEFAULT_PROJECT_TITLE;
+  return chunkCards(timelineCards).map((pageCards) => ({
+    headerTitle,
+    dataStatusText,
+    timelineTitle: timelineItem.name,
+    cards: pageCards
+  }));
+}
+
+async function downloadPdf(pages, fileName) {
+  const url = URL.createObjectURL(await buildPdf(pages));
   const link = document.createElement("a");
   link.href = url;
   link.download = fileName;
@@ -726,24 +966,27 @@ function downloadPdf(cardList, fileName) {
   URL.revokeObjectURL(url);
 }
 
-function exportCard(card) {
-  const prefix = card.date || safeFilePart(card.period || "zeitraum");
-  downloadPdf([card], `${prefix}-${safeFilePart(card.title)}.pdf`);
-}
-
-function exportAllCards() {
+async function exportAllCards() {
   if (cards.length === 0) return;
-  downloadPdf(cards, "projekt-zeitstrahl-alle-karten.pdf");
+  syncVisibleDataBeforeExport();
+  await downloadPdf(
+    buildAllPdfPages(),
+    `${safeFilePart(projectMeta.title || DEFAULT_PROJECT_TITLE)}_${fileTimestamp()}.pdf`
+  );
 }
 
-function exportTimeline(timelineId) {
+async function exportTimeline(timelineId) {
+  syncVisibleDataBeforeExport();
   const timelineItem = timelines.find((item) => item.id === timelineId);
   if (!timelineItem) return;
 
   const timelineCards = cards.filter((card) => cardTimelineId(card) === timelineId);
   if (timelineCards.length === 0) return;
 
-  downloadPdf(timelineCards, `${safeFilePart(timelineItem.name)}-alle-karten.pdf`);
+  await downloadPdf(
+    buildTimelinePdfPages(timelineItem, timelineCards),
+    `${safeFilePart(timelineItem.name)}_${fileTimestamp()}.pdf`
+  );
 }
 
 async function handleSubmit(event) {
@@ -835,7 +1078,7 @@ timelineList.addEventListener("click", async (event) => {
   }
 
   if (button.dataset.action === "export-timeline") {
-    exportTimeline(button.dataset.timelineId);
+    await exportTimeline(button.dataset.timelineId);
     return;
   }
 
@@ -845,11 +1088,9 @@ timelineList.addEventListener("click", async (event) => {
   }
 
   const id = Number(button.dataset.id);
-  const card = cards.find((item) => item.id === id);
 
   if (button.dataset.action === "edit") editCard(id);
   if (button.dataset.action === "delete") await deleteById(id);
-  if (button.dataset.action === "pdf" && card) exportCard(card);
 });
 
 timelineList.addEventListener("input", (event) => {
@@ -860,7 +1101,7 @@ timelineList.addEventListener("input", (event) => {
   const timelineItem = timelines.find((item) => item.id === input.dataset.timelineId);
   if (!timelineItem) return;
 
-  timelineItem.name = input.value.trim().slice(0, 60) || "Zeitstrahl";
+  timelineItem.name = input.value.trim().slice(0, 100) || "Zeitstrahl";
   persistTimelinesMeta();
 });
 
@@ -942,12 +1183,21 @@ sortDatePickerButton.addEventListener("click", () => {
 descriptionInput.addEventListener("input", updateCounters);
 cancelEditButton.addEventListener("click", resetForm);
 addTimelineButton.addEventListener("click", addTimeline);
+exportAllPdfButton.addEventListener("click", exportAllCards);
 toggleEditorButton.addEventListener("click", toggleEditor);
 projectTitleInput.addEventListener("input", () => {
   resizeProjectTitle();
   persistProjectMeta();
 });
 projectDescriptionInput.addEventListener("input", persistProjectMeta);
+importDataButton.addEventListener("click", () => {
+  if (!requireUnlocked()) return;
+  importDataInput.click();
+});
+importDataInput.addEventListener("change", async () => {
+  await importSharedData(importDataInput.files?.[0]);
+  importDataInput.value = "";
+});
 exportDataButton.addEventListener("click", exportSharedData);
 deleteCurrentButton.addEventListener("click", async () => {
   if (!cardIdInput.value) return;
@@ -955,7 +1205,6 @@ deleteCurrentButton.addEventListener("click", async () => {
 });
 window.timelineProjectApp = {
   buildPdf,
-  exportCard,
   exportAllCards,
   exportTimeline,
   exportSharedData

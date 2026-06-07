@@ -1,16 +1,291 @@
 {
   "version": 1,
-  "exportedAt": "2026-06-04T00:00:00.000Z",
+  "exportedAt": "2026-06-06T12:00:00.000Z",
   "project": {
-    "title": "Schulentwicklungsprojekt",
-    "description": "Erläuterung"
+    "title": "Schulentwicklungsboard",
+    "description": "Gemeinsame Entwicklungsprojekte im Schuljahr 2025/2026"
   },
   "timelines": [
     {
-      "id": "timeline-1",
-      "name": "Zeitstrahl 1",
-      "createdAt": "2026-06-04T00:00:00.000Z"
+      "id": "timeline-schulhofgestaltung",
+      "name": "Schulhofgestaltung",
+      "createdAt": "2025-08-01T00:00:00.000Z"
+    },
+    {
+      "id": "timeline-leistungsbewertungskonzept",
+      "name": "Entwicklung Leistungsbewertungskonzept",
+      "createdAt": "2025-08-01T00:00:00.000Z"
+    },
+    {
+      "id": "timeline-abitur-nrw-2030",
+      "name": "Abitur NRW 2030",
+      "createdAt": "2026-01-01T00:00:00.000Z"
     }
   ],
-  "cards": []
+  "cards": [
+    {
+      "id": 1,
+      "title": "Auftakt und Bestandsaufnahme",
+      "date": "2025-08-01",
+      "period": "",
+      "sortDate": "2025-08-01",
+      "description": "Projektstart zur Schulhofgestaltung. Bestehende Flaechen, Aufenthaltsbereiche, Bewegungszonen und Problemstellen werden gemeinsam mit Schuelervertretung, Hausmeisterei und Schulleitung gesichtet.",
+      "color": "#dff0ff",
+      "timelineId": "timeline-schulhofgestaltung",
+      "updatedAt": "2026-06-06T12:00:00.000Z"
+    },
+    {
+      "id": 2,
+      "title": "Schuelerideen sammeln",
+      "date": "",
+      "period": "September 2025",
+      "sortDate": "2025-09-01",
+      "description": "Klassen und Kurse entwickeln Ideen fuer einen attraktiven Schulhof. Im Mittelpunkt stehen Bewegung, Ruhe, Schatten, Begruenung und Orte fuer Begegnung.",
+      "color": "#ddf7e8",
+      "timelineId": "timeline-schulhofgestaltung",
+      "updatedAt": "2026-06-06T12:00:00.000Z"
+    },
+    {
+      "id": 3,
+      "title": "Auswertung und Priorisierung",
+      "date": "",
+      "period": "Oktober bis November 2025",
+      "sortDate": "2025-10-01",
+      "description": "Die Ideen werden gebuendelt und nach Nutzen, Kosten, Umsetzbarkeit und Pflegeaufwand priorisiert. Daraus entsteht eine erste Rangfolge fuer die weitere Planung.",
+      "color": "#fff7c7",
+      "timelineId": "timeline-schulhofgestaltung",
+      "updatedAt": "2026-06-06T12:00:00.000Z"
+    },
+    {
+      "id": 4,
+      "title": "Planung mit Partnern",
+      "date": "",
+      "period": "Dezember 2025 bis Februar 2026",
+      "sortDate": "2025-12-01",
+      "description": "Schultraeger, Foerderverein und externe Partner pruefen die priorisierten Vorschlaege. Ein abgestimmter Plan fuer Ausstattung, Pflanzbereiche und Aufenthaltszonen wird erstellt.",
+      "color": "#ffe2e7",
+      "timelineId": "timeline-schulhofgestaltung",
+      "updatedAt": "2026-06-06T12:00:00.000Z"
+    },
+    {
+      "id": 5,
+      "title": "Umsetzung in Bauabschnitten",
+      "date": "",
+      "period": "Maerz bis Mai 2026",
+      "sortDate": "2026-03-01",
+      "description": "Die Umsetzung startet in abgestimmten Bauabschnitten. Pflanzaktionen, Sitzgelegenheiten, Markierungen und Bewegungsangebote werden Schritt fuer Schritt realisiert.",
+      "color": "#dff0ff",
+      "timelineId": "timeline-schulhofgestaltung",
+      "updatedAt": "2026-06-06T12:00:00.000Z"
+    },
+    {
+      "id": 6,
+      "title": "Eroeffnung und Rueckblick",
+      "date": "2026-06-30",
+      "period": "",
+      "sortDate": "2026-06-30",
+      "description": "Der neugestaltete Schulhof wird eroeffnet. Erste Rueckmeldungen zur Nutzung werden gesammelt und kleinere Nachsteuerungen fuer das kommende Schuljahr festgehalten.",
+      "color": "#ddf7e8",
+      "timelineId": "timeline-schulhofgestaltung",
+      "updatedAt": "2026-06-06T12:00:00.000Z"
+    },
+    {
+      "id": 7,
+      "title": "Projektstart und Auftrag",
+      "date": "2025-08-01",
+      "period": "",
+      "sortDate": "2025-08-01",
+      "description": "Start der Entwicklung eines schulweiten Leistungsbewertungskonzepts. Ziel ist ein transparenter, verbindlicher und fachlich anschlussfaehiger Rahmen.",
+      "color": "#dff0ff",
+      "timelineId": "timeline-leistungsbewertungskonzept",
+      "updatedAt": "2026-06-06T12:00:00.000Z"
+    },
+    {
+      "id": 8,
+      "title": "Rechtsrahmen sichten",
+      "date": "",
+      "period": "August bis September 2025",
+      "sortDate": "2025-08-20",
+      "description": "Relevante Vorgaben, Kernlehrplaene, Schulgesetz, APO-Bestimmungen und schulinterne Beschluesse werden gesichtet und fuer die Fachschaften aufbereitet.",
+      "color": "#ddf7e8",
+      "timelineId": "timeline-leistungsbewertungskonzept",
+      "updatedAt": "2026-06-06T12:00:00.000Z"
+    },
+    {
+      "id": 9,
+      "title": "Ist-Stand der Fachschaften",
+      "date": "",
+      "period": "September bis Oktober 2025",
+      "sortDate": "2025-09-15",
+      "description": "Alle Fachschaften erfassen bestehende Regelungen zur Leistungsbewertung. Gemeinsamkeiten, Unterschiede und Klaerungsbedarfe werden dokumentiert.",
+      "color": "#fff7c7",
+      "timelineId": "timeline-leistungsbewertungskonzept",
+      "updatedAt": "2026-06-06T12:00:00.000Z"
+    },
+    {
+      "id": 10,
+      "title": "Schulweite Leitlinien",
+      "date": "",
+      "period": "November 2025",
+      "sortDate": "2025-11-01",
+      "description": "Eine Steuergruppe formuliert schulweite Leitlinien zu Transparenz, Rueckmeldung, Gewichtung, Dokumentation und Nachteilsausgleich.",
+      "color": "#ffe2e7",
+      "timelineId": "timeline-leistungsbewertungskonzept",
+      "updatedAt": "2026-06-06T12:00:00.000Z"
+    },
+    {
+      "id": 11,
+      "title": "Entwurf Bewertungsraster",
+      "date": "",
+      "period": "Dezember 2025 bis Januar 2026",
+      "sortDate": "2025-12-01",
+      "description": "Muster fuer Bewertungsraster und Rueckmeldeboegen werden entwickelt. Sie dienen als Orientierung fuer schriftliche, muendliche und praktische Leistungen.",
+      "color": "#dff0ff",
+      "timelineId": "timeline-leistungsbewertungskonzept",
+      "updatedAt": "2026-06-06T12:00:00.000Z"
+    },
+    {
+      "id": 12,
+      "title": "Fachschaftliche Anpassung",
+      "date": "",
+      "period": "Februar bis Maerz 2026",
+      "sortDate": "2026-02-01",
+      "description": "Die Fachschaften uebertragen die schulweiten Leitlinien auf ihre Faecher. Fachspezifische Besonderheiten werden begruendet und dokumentiert.",
+      "color": "#ddf7e8",
+      "timelineId": "timeline-leistungsbewertungskonzept",
+      "updatedAt": "2026-06-06T12:00:00.000Z"
+    },
+    {
+      "id": 13,
+      "title": "Feedbackphase",
+      "date": "",
+      "period": "April 2026",
+      "sortDate": "2026-04-01",
+      "description": "Entwuerfe werden in Jahrgangsteams, Fachkonferenzen und der Schulleitung beraten. Rueckmeldungen werden systematisch gesammelt.",
+      "color": "#fff7c7",
+      "timelineId": "timeline-leistungsbewertungskonzept",
+      "updatedAt": "2026-06-06T12:00:00.000Z"
+    },
+    {
+      "id": 14,
+      "title": "Ueberarbeitung und Abgleich",
+      "date": "",
+      "period": "Mai bis Juni 2026",
+      "sortDate": "2026-05-01",
+      "description": "Die Rueckmeldungen werden eingearbeitet. Das Konzept wird auf Einheitlichkeit, Verstaendlichkeit und Praktikabilitaet geprueft.",
+      "color": "#ffe2e7",
+      "timelineId": "timeline-leistungsbewertungskonzept",
+      "updatedAt": "2026-06-06T12:00:00.000Z"
+    },
+    {
+      "id": 15,
+      "title": "Erprobung im Schulalltag",
+      "date": "",
+      "period": "August bis November 2026",
+      "sortDate": "2026-08-01",
+      "description": "Das Konzept wird in ausgewaehlten Bereichen erprobt. Erfahrungen aus Unterricht, Beratung und Leistungsrueckmeldung werden gesammelt.",
+      "color": "#dff0ff",
+      "timelineId": "timeline-leistungsbewertungskonzept",
+      "updatedAt": "2026-06-06T12:00:00.000Z"
+    },
+    {
+      "id": 16,
+      "title": "Beschlussfassung",
+      "date": "2026-12-20",
+      "period": "",
+      "sortDate": "2026-12-20",
+      "description": "Die finale Fassung wird beschlossen und fuer die schulische Arbeit verbindlich gemacht. Eine Evaluation fuer das folgende Schuljahr wird vorgesehen.",
+      "color": "#ddf7e8",
+      "timelineId": "timeline-leistungsbewertungskonzept",
+      "updatedAt": "2026-06-06T12:00:00.000Z"
+    },
+    {
+      "id": 17,
+      "title": "Informationsstart Reform",
+      "date": "2026-01-01",
+      "period": "",
+      "sortDate": "2026-01-01",
+      "description": "Start der schulischen Vorbereitung auf Abitur NRW 2030. Erste Informationen zur Reform der gymnasialen Oberstufe werden gesammelt und eingeordnet.",
+      "color": "#dff0ff",
+      "timelineId": "timeline-abitur-nrw-2030",
+      "updatedAt": "2026-06-06T12:00:00.000Z"
+    },
+    {
+      "id": 18,
+      "title": "Auswirkungen analysieren",
+      "date": "",
+      "period": "Februar bis April 2026",
+      "sortDate": "2026-02-01",
+      "description": "Die Schule prueft, welche Auswirkungen die Reform auf Kurswahl, Beratung, Fachangebote, Leistungskurse und Laufbahnplanung haben kann.",
+      "color": "#ddf7e8",
+      "timelineId": "timeline-abitur-nrw-2030",
+      "updatedAt": "2026-06-06T12:00:00.000Z"
+    },
+    {
+      "id": 19,
+      "title": "Beratungskonzept anpassen",
+      "date": "",
+      "period": "Mai bis Juli 2026",
+      "sortDate": "2026-05-01",
+      "description": "Das Beratungskonzept fuer die Sekundarstufe I und den Uebergang in die Oberstufe wird angepasst. Informationswege fuer Eltern und Schueler werden geplant.",
+      "color": "#fff7c7",
+      "timelineId": "timeline-abitur-nrw-2030",
+      "updatedAt": "2026-06-06T12:00:00.000Z"
+    },
+    {
+      "id": 20,
+      "title": "Fachliche Vorbereitung",
+      "date": "",
+      "period": "August bis Oktober 2026",
+      "sortDate": "2026-08-01",
+      "description": "Fachkonferenzen pruefen notwendige Anpassungen in der Oberstufenarbeit. Schwerpunkte sind Kompetenzerwartungen, Klausurformate und Absprachen zur Vorbereitung.",
+      "color": "#ffe2e7",
+      "timelineId": "timeline-abitur-nrw-2030",
+      "updatedAt": "2026-06-06T12:00:00.000Z"
+    },
+    {
+      "id": 21,
+      "title": "Kursplanung simulieren",
+      "date": "",
+      "period": "November 2026 bis Januar 2027",
+      "sortDate": "2026-11-01",
+      "description": "Moegliche Kursangebote und Wahlmodelle werden simuliert. Ziel ist eine tragfaehige Planung trotz veraenderter Rahmenbedingungen.",
+      "color": "#dff0ff",
+      "timelineId": "timeline-abitur-nrw-2030",
+      "updatedAt": "2026-06-06T12:00:00.000Z"
+    },
+    {
+      "id": 22,
+      "title": "Kommunikation vorbereiten",
+      "date": "",
+      "period": "Februar bis Maerz 2027",
+      "sortDate": "2027-02-01",
+      "description": "Informationsveranstaltungen, FAQ und Beratungsunterlagen werden vorbereitet. Die Kommunikation soll sicherstellen, dass Wahlentscheidungen gut begleitet werden.",
+      "color": "#ddf7e8",
+      "timelineId": "timeline-abitur-nrw-2030",
+      "updatedAt": "2026-06-06T12:00:00.000Z"
+    },
+    {
+      "id": 23,
+      "title": "Umsetzungsschritte festlegen",
+      "date": "",
+      "period": "April bis Mai 2027",
+      "sortDate": "2027-04-01",
+      "description": "Schulleitung, Oberstufenkoordination und Fachschaften legen konkrete Umsetzungsschritte, Verantwortlichkeiten und Zeitfenster fuer das Schuljahr 2027/2028 fest.",
+      "color": "#fff7c7",
+      "timelineId": "timeline-abitur-nrw-2030",
+      "updatedAt": "2026-06-06T12:00:00.000Z"
+    },
+    {
+      "id": 24,
+      "title": "Startklar fuer naechste Phase",
+      "date": "2027-06-30",
+      "period": "",
+      "sortDate": "2027-06-30",
+      "description": "Die Vorbereitungsphase wird abgeschlossen. Offene Punkte werden dokumentiert, und die Schule startet mit einer klaren Struktur in die weitere Umsetzung der Reform.",
+      "color": "#ffe2e7",
+      "timelineId": "timeline-abitur-nrw-2030",
+      "updatedAt": "2026-06-06T12:00:00.000Z"
+    }
+  ]
 }

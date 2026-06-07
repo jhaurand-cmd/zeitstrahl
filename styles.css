@@ -48,7 +48,7 @@ textarea {
 
 .project-editor {
   display: grid;
-  gap: 8px;
+  gap: 10px;
   flex: 1 1 912px;
   width: min(912px, 100%);
   min-width: 260px;
@@ -129,11 +129,15 @@ h1 {
 .project-description-input {
   width: 100%;
   max-width: 720px;
-  min-height: 66px;
-  padding: 10px 12px;
+  min-height: 26px;
+  height: 26px;
+  padding: 0;
+  overflow: hidden;
+  white-space: nowrap;
   background: #ffffff;
   border-color: transparent;
-  resize: vertical;
+  resize: none;
+  line-height: 1.25;
 }
 
 .project-description-input[readonly] {
@@ -360,7 +364,7 @@ button:disabled {
 }
 
 .data-status {
-  margin: 0 0 18px;
+  margin: 0;
   color: #4f6173;
   font-size: 0.92rem;
   font-weight: 700;
@@ -393,6 +397,11 @@ button:disabled {
   margin-bottom: 8px;
 }
 
+.timeline-section-header > div:first-child {
+  flex: 1 1 680px;
+  min-width: 0;
+}
+
 .timeline-section-actions {
   display: flex;
   flex: 0 0 auto;
@@ -400,7 +409,7 @@ button:disabled {
 }
 
 .timeline-title-input {
-  width: min(420px, 100%);
+  width: 100%;
   min-height: auto;
   padding: 0;
   color: #111111;
